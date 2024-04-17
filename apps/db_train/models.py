@@ -1,6 +1,5 @@
 from django.db import models
-from django.core.validators import RegexValidator
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from datetime import datetime
 
 
@@ -17,7 +16,7 @@ class Author(models.Model):
 
     email = models.EmailField(verbose_name='Адрес электронной почты',
                               help_text="Адрес почты в формате *@*.*",
-                              unique=True,
+                              unique=True
                               )
 
     first_name = models.CharField(max_length=100,
@@ -120,3 +119,58 @@ class Author(models.Model):
             additional_year = (today.month, today.day) < (self.date_birth.month, self.date_birth.day)
             self.age = today.year - self.date_birth.year - additional_year  # Перезаписываем значение
         super().save(*args, **kwargs)
+
+
+class AuthorProfile(models.Model):
+    """
+    Связь Один-к-одному (One-to-One)
+    параметр on_delete относится к внешнему ключу (foreign key)
+    """
+    author = models.OneToOneField('Author', on_delete=models.CASCADE)
+    stage = models.IntegerField(default=0,
+                                blank=True,
+                                verbose_name="Стаж",
+                                help_text="Стаж в годах")
+
+    def __str__(self):
+        return f"Автор: {self.author.username}; Стаж: {self.stage} лет"
+
+    class Meta:
+        verbose_name = "Профиль Автора"
+        verbose_name_plural = "Профили авторов"
+
+
+class Entry(models.Model):
+    """
+    Связь Один-ко-многим (One-to-Many)
+    Здесь related_name используется для более удобному обращению к записям, через автора,
+    т.е. у объекта автор появится мнимое поле, которого не существует в БД, но будет связь со
+    всеми его статьями через поле 'entries' эту связь также называют обратная связь.
+    """
+    text = models.TextField(verbose_name="Текст статьи",
+                            )
+    author = models.ForeignKey("Author", on_delete=models.CASCADE, related_name='entries')
+    tags = models.ManyToManyField("Tag", related_name='entries')
+
+    def __str__(self):
+        return self.text
+
+    class Meta:
+        verbose_name = "Статья"
+        verbose_name_plural = "Статьи"
+
+
+class Tag(models.Model):
+    """
+    Связь Многие-ко-многим (Many-to-Many)
+    """
+    name = models.CharField(max_length=50,
+                            verbose_name="Название",
+                            )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Тег"
+        verbose_name_plural = "Теги"
